@@ -1,0 +1,2 @@
+include ':app'
+rootProject.name='ZXing-3.4.0_1'
