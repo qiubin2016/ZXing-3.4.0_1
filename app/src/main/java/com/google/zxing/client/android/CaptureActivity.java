@@ -77,6 +77,8 @@ import java.util.Map;
  *
  * @author dswitkin@google.com (Daniel Switkin)
  * @author Sean Owen
+ * 注意事项：在Redmi 6 Pro上（MIUI 11.0.4 android 9.0）运行会出现崩溃，报错："getDiskStats failed with result NOT_SUPPORTED and size 0"
+ * 解决办法：app内需添加动态申请相机权限或者手动在系统权限管理里对该应用授权相机权限
  */
 public final class CaptureActivity extends Activity implements SurfaceHolder.Callback {
 
