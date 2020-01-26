@@ -77,8 +77,7 @@ import java.util.Map;
  *
  * @author dswitkin@google.com (Daniel Switkin)
  * @author Sean Owen
- * 注意事项：在Redmi 6 Pro上（MIUI 11.0.4 android 9.0）运行会出现崩溃，报错："getDiskStats failed with result NOT_SUPPORTED and size 0"
- * 解决办法：app内需添加动态申请相机权限或者手动在系统权限管理里对该应用授权相机权限
+
  */
 public final class CaptureActivity extends Activity implements SurfaceHolder.Callback {
 
@@ -172,8 +171,10 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
 
     if (prefs.getBoolean(PreferencesActivity.KEY_DISABLE_AUTO_ORIENTATION, true)) {
       setRequestedOrientation(getCurrentOrientation());
+      Log.i(TAG, "onResume:getCurrentOrientation");
     } else {
       setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE);
+      Log.i(TAG, "onResume:ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE");
     }
 
     resetStatusView();
@@ -196,7 +197,7 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
     characterSet = null;
 
     if (intent != null) {
-
+      Log.i(TAG, "onResume:intent is not null!");
       String action = intent.getAction();
       String dataString = intent.getDataString();
 
@@ -268,6 +269,9 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
 
   private int getCurrentOrientation() {
     int rotation = getWindowManager().getDefaultDisplay().getRotation();
+    Log.i(TAG, "current rotation:" + rotation);
+    Log.i(TAG, "getResources().getConfiguration().orientation:" + getResources().getConfiguration().orientation);
+    Log.i(TAG, "Configuration.ORIENTATION_LANDSCAPE:" + Configuration.ORIENTATION_LANDSCAPE);
     if (getResources().getConfiguration().orientation == Configuration.ORIENTATION_LANDSCAPE) {
       switch (rotation) {
         case Surface.ROTATION_0:
