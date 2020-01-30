@@ -24,6 +24,7 @@ import com.google.zxing.PlanarYUVLuminanceSource;
 import com.google.zxing.ReaderException;
 import com.google.zxing.Result;
 import com.google.zxing.common.HybridBinarizer;
+import com.google.zxing.qrcode.QRCodeReader;
 
 import android.os.Bundle;
 import android.os.Handler;
@@ -41,11 +42,15 @@ final class DecodeHandler extends Handler {
 
   private final CaptureActivity activity;
   private final MultiFormatReader multiFormatReader;
+  private final QRCodeReader qrCodeReader;
   private boolean running = true;
 
   DecodeHandler(CaptureActivity activity, Map<DecodeHintType,Object> hints) {
     multiFormatReader = new MultiFormatReader();
     multiFormatReader.setHints(hints);
+
+    qrCodeReader = new QRCodeReader();
+
     this.activity = activity;
   }
 
@@ -56,7 +61,10 @@ final class DecodeHandler extends Handler {
     }
     switch (message.what) {
       case R.id.decode:
-        decode((byte[]) message.obj, message.arg1, message.arg2);
+        long startTime = System.nanoTime();
+        decode((byte[]) message.obj, message.arg1, message.arg2);  //图片解码 qiub_200128
+        long consumingTime = System.nanoTime() - startTime;
+        Log.i(TAG, "----decode:" + (consumingTime / 1000000) + "ms!");
         break;
       case R.id.quit:
         running = false;
@@ -74,13 +82,20 @@ final class DecodeHandler extends Handler {
    * @param height The height of the preview frame.
    */
   private void decode(byte[] data, int width, int height) {
+    Log.i(TAG, "width:" + width + ",heigth:" + height + ",size:" + data.length);
+
     long start = System.nanoTime();
     Result rawResult = null;
     PlanarYUVLuminanceSource source = activity.getCameraManager().buildLuminanceSource(data, width, height);
     if (source != null) {
       BinaryBitmap bitmap = new BinaryBitmap(new HybridBinarizer(source));
       try {
-        rawResult = multiFormatReader.decodeWithState(bitmap);
+        //multiFormatReader.setHints();  //此方法将状态添加到MultiFormatReader，通过一次设置提示，后续调用
+        //multiFormatReader.decodeWithState可以重用同一组读取器，而无需重新分配内存。这个对于连续扫描客户端的性能很重要。
+        //在Redmi 6 Pro上（MIUI 11.0.4 android 9.0）运行，耗时52-152ms(152ms是第一次识别，需要分配内存)
+//        rawResult = multiFormatReader.decodeWithState(bitmap);  //调用core-3.4.0.jar中的MultiFormatReader.decodeWithState()解码
+        //在Redmi 6 Pro上（MIUI 11.0.4 android 9.0）运行，耗时37-136ms(136ms是第一次识别，需要分配内存)
+        rawResult = qrCodeReader.decode(bitmap);    //直接用QRCodeReader解码
       } catch (ReaderException re) {
         // continue
       } finally {

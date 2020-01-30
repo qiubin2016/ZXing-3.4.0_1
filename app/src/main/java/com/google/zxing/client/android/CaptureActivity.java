@@ -77,7 +77,8 @@ import java.util.Map;
  *
  * @author dswitkin@google.com (Daniel Switkin)
  * @author Sean Owen
-
+ * 注意事项：在Redmi 6 Pro上（MIUI 11.0.4 android 9.0）运行会出现崩溃，报错："getDiskStats failed with result NOT_SUPPORTED and size 0"
+ * 解决办法：app内需添加动态申请相机权限或者手动在系统权限管理里对该应用授权相机权限
  */
 public final class CaptureActivity extends Activity implements SurfaceHolder.Callback {
 
@@ -201,8 +202,13 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
       String action = intent.getAction();
       String dataString = intent.getDataString();
 
-      if (Intents.Scan.ACTION.equals(action)) {
+      Log.i(TAG, "Intent get type:" + intent.getType());
+      Log.i(TAG, "Intent get action:" + intent.getAction());
+      Log.i(TAG, "Intent get dataString:" + intent.getDataString());
+      Log.i(TAG, "Intent get scheme:" + intent.getScheme());
 
+      if (Intents.Scan.ACTION.equals(action)) {
+        Log.i(TAG, "action == com.google.zxing.client.android.SCAN");
         // Scan the formats the intent requested, and return the result to the calling activity.
         source = IntentSource.NATIVE_APP_INTENT;
         decodeFormats = DecodeFormatManager.parseDecodeFormats(intent);
@@ -249,10 +255,12 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
         // Allow a sub-set of the hints to be specified by the caller.
         decodeHints = DecodeHintManager.parseDecodeHints(inputUri);
 
+      } else {
+        Log.i(TAG, "intent else");
       }
 
       characterSet = intent.getStringExtra(Intents.Scan.CHARACTER_SET);
-
+      Log.i(TAG, "characterSet:" + characterSet);
     }
 
     SurfaceView surfaceView = (SurfaceView) findViewById(R.id.preview_view);
@@ -260,7 +268,7 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
     if (hasSurface) {
       // The activity was paused but not stopped, so the surface still exists. Therefore
       // surfaceCreated() won't be called, so init the camera here.
-      initCamera(surfaceHolder);
+      initCamera(surfaceHolder);  //-----------------------------------------初始化相机相关参数
     } else {
       // Install the callback and wait for surfaceCreated() to init the camera.
       surfaceHolder.addCallback(this);
@@ -303,6 +311,7 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
     return false;
   }
 
+  //当系统即将启动另一个activity之前调用
   @Override
   protected void onPause() {
     if (handler != null) {
@@ -312,7 +321,7 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
     inactivityTimer.onPause();
     ambientLightManager.stop();
     beepManager.close();
-    cameraManager.closeDriver();
+    cameraManager.closeDriver();  //关闭相机等操作
     //historyManager = null; // Keep for onActivityResult
     if (!hasSurface) {
       SurfaceView surfaceView = (SurfaceView) findViewById(R.id.preview_view);
@@ -322,6 +331,7 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
     super.onPause();
   }
 
+  //当前activity被销毁之前将会调用
   @Override
   protected void onDestroy() {
     inactivityTimer.shutdown();
@@ -330,14 +340,18 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
 
   @Override
   public boolean onKeyDown(int keyCode, KeyEvent event) {
+    Log.i(TAG, "onKeyDown");
     switch (keyCode) {
-      case KeyEvent.KEYCODE_BACK:
+      case KeyEvent.KEYCODE_BACK:  //手机的返回键
+        Log.i(TAG, "key code:back, source:" + source);
         if (source == IntentSource.NATIVE_APP_INTENT) {
+          Log.i(TAG, "intent source == native app intent");
           setResult(RESULT_CANCELED);
           finish();
           return true;
         }
         if ((source == IntentSource.NONE || source == IntentSource.ZXING_LINK) && lastResult != null) {
+          Log.i(TAG, "intent source == none,lastResult:" + lastResult.toString());
           restartPreviewAfterDelay(0L);
           return true;
         }
@@ -347,10 +361,10 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
         // Handle these events so they don't launch the Camera app
         return true;
       // Use volume up/down to turn on light
-      case KeyEvent.KEYCODE_VOLUME_DOWN:
+      case KeyEvent.KEYCODE_VOLUME_DOWN:  //音量减--关闭闪光灯
         cameraManager.setTorch(false);
         return true;
-      case KeyEvent.KEYCODE_VOLUME_UP:
+      case KeyEvent.KEYCODE_VOLUME_UP:  //音量加--打开闪光灯
         cameraManager.setTorch(true);
         return true;
     }
@@ -393,6 +407,7 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
 
   @Override
   public void onActivityResult(int requestCode, int resultCode, Intent intent) {
+      Log.i(TAG, "requestCode:" + requestCode + ",resultCode:" + resultCode);
     if (resultCode == RESULT_OK && requestCode == HISTORY_REQUEST_CODE && historyManager != null) {
       int itemNumber = intent.getIntExtra(Intents.History.ITEM_NUMBER, -1);
       if (itemNumber >= 0) {
@@ -418,11 +433,13 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
     }
   }
 
+  //----------------SurfaceHolder.Callback--------------------------
   @Override
   public void surfaceCreated(SurfaceHolder holder) {
     if (holder == null) {
       Log.e(TAG, "*** WARNING *** surfaceCreated() gave us a null surface!");
     }
+    Log.i(TAG, "surface:hasSruface:" + hasSurface);
     if (!hasSurface) {
       hasSurface = true;
       initCamera(holder);
@@ -431,6 +448,7 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
 
   @Override
   public void surfaceDestroyed(SurfaceHolder holder) {
+    Log.i(TAG, "surface:hasSruface set false");
     hasSurface = false;
   }
 
@@ -438,6 +456,8 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
   public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
     // do nothing
   }
+  //----------------SurfaceHolder.Callback--------------------------
+
 
   /**
    * A valid barcode has been found, so give an indication of success and show the results.
@@ -727,7 +747,7 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
       return;
     }
     try {
-      cameraManager.openDriver(surfaceHolder);
+      cameraManager.openDriver(surfaceHolder);  //Opens the camera driver and initializes the hardware parameters.
       // Creating the handler starts the preview, which can also throw a RuntimeException.
       if (handler == null) {
         handler = new CaptureActivityHandler(this, decodeFormats, decodeHints, characterSet, cameraManager);
