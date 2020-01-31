@@ -61,10 +61,11 @@ final class DecodeHandler extends Handler {
     }
     switch (message.what) {
       case R.id.decode:
+        Log.i(TAG, "handlerMessage R.id.decode");
         long startTime = System.nanoTime();
         decode((byte[]) message.obj, message.arg1, message.arg2);  //图片解码 qiub_200128
         long consumingTime = System.nanoTime() - startTime;
-        Log.i(TAG, "----decode:" + (consumingTime / 1000000) + "ms!");
+        Log.i(TAG, "----decode:" + ((float)consumingTime / 1000000) + "ms!");
         break;
       case R.id.quit:
         running = false;
@@ -90,12 +91,13 @@ final class DecodeHandler extends Handler {
     if (source != null) {
       BinaryBitmap bitmap = new BinaryBitmap(new HybridBinarizer(source));
       try {
-        //multiFormatReader.setHints();  //此方法将状态添加到MultiFormatReader，通过一次设置提示，后续调用
-        //multiFormatReader.decodeWithState可以重用同一组读取器，而无需重新分配内存。这个对于连续扫描客户端的性能很重要。
-        //在Redmi 6 Pro上（MIUI 11.0.4 android 9.0）运行，耗时52-152ms(152ms是第一次识别，需要分配内存)
-//        rawResult = multiFormatReader.decodeWithState(bitmap);  //调用core-3.4.0.jar中的MultiFormatReader.decodeWithState()解码
+        /**multiFormatReader.setHints();  //此方法将状态添加到MultiFormatReader，通过一次设置提示，后续调用
+          multiFormatReader.decodeWithState可以重用同一组读取器，而无需重新分配内存。这个对于连续扫描客户端的性能很重要。
+          在Redmi 6 Pro上（MIUI 11.0.4 android 9.0）运行，耗时52-152ms(152ms是第一次识别，需要分配内存)
+         **/
+        rawResult = multiFormatReader.decodeWithState(bitmap);  //调用core-3.4.0.jar中的MultiFormatReader.decodeWithState()解码
         //在Redmi 6 Pro上（MIUI 11.0.4 android 9.0）运行，耗时37-136ms(136ms是第一次识别，需要分配内存)
-        rawResult = qrCodeReader.decode(bitmap);    //直接用QRCodeReader解码
+//        rawResult = qrCodeReader.decode(bitmap);    //直接用QRCodeReader解码
       } catch (ReaderException re) {
         // continue
       } finally {
@@ -109,16 +111,23 @@ final class DecodeHandler extends Handler {
       long end = System.nanoTime();
       Log.d(TAG, "Found barcode in " + TimeUnit.NANOSECONDS.toMillis(end - start) + " ms");
       if (handler != null) {
+        //创建一个message
+        //h:handler
+        //what:R.id.decode_succeeded
+        //obj:rawResult
         Message message = Message.obtain(handler, R.id.decode_succeeded, rawResult);
         Bundle bundle = new Bundle();
         bundleThumbnail(source, bundle);        
         message.setData(bundle);
-        message.sendToTarget();
+        message.sendToTarget();  //发送消息
       }
     } else {
       if (handler != null) {
+        //创建一个message
+        //h:handler
+        //what:R.id.decode_failed
         Message message = Message.obtain(handler, R.id.decode_failed);
-        message.sendToTarget();
+        message.sendToTarget();  //发送消息
       }
     }
   }

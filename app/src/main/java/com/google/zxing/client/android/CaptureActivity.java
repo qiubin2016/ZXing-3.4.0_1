@@ -31,6 +31,7 @@ import com.google.zxing.client.android.result.ResultHandler;
 import com.google.zxing.client.android.result.ResultHandlerFactory;
 import com.google.zxing.client.android.result.supplement.SupplementalInfoRetriever;
 import com.google.zxing.client.android.share.ShareActivity;
+import com.google.zxing.client.android.utils.Utils;
 
 import android.app.Activity;
 import android.app.AlertDialog;
@@ -94,6 +95,11 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
   private static final Collection<ResultMetadataType> DISPLAYABLE_METADATA_TYPES =
       EnumSet.of(ResultMetadataType.ISSUE_NUMBER,
                  ResultMetadataType.SUGGESTED_PRICE,
+                /**
+                * ERROR_CORRECTION_LEVEL:容错率，也就是纠错水平，二维码破损一部分也能扫码就归功于容错率，容错率可分为L、 M、 Q、 H四个等级，
+                * 其分别占比为：L：7% M：15% Q：25% H：35%。传null时，默认使用 “L”
+                * 当然容错率越高，二维码能存储的内容也随之变小。
+                */
                  ResultMetadataType.ERROR_CORRECTION_LEVEL,
                  ResultMetadataType.POSSIBLE_COUNTRY);
 
@@ -371,6 +377,7 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
     return super.onKeyDown(keyCode, event);
   }
 
+  /**---------------menu begin----------------**/
   @Override
   public boolean onCreateOptionsMenu(Menu menu) {
     MenuInflater menuInflater = getMenuInflater();
@@ -383,19 +390,19 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
     Intent intent = new Intent(Intent.ACTION_VIEW);
     intent.addFlags(Intents.FLAG_NEW_DOC);
     switch (item.getItemId()) {
-      case R.id.menu_share:
+      case R.id.menu_share:  //分享二维码
         intent.setClassName(this, ShareActivity.class.getName());
         startActivity(intent);
         break;
-      case R.id.menu_history:
+      case R.id.menu_history:  //历史记录
         intent.setClassName(this, HistoryActivity.class.getName());
         startActivityForResult(intent, HISTORY_REQUEST_CODE);
         break;
-      case R.id.menu_settings:
+      case R.id.menu_settings:  //设置
         intent.setClassName(this, PreferencesActivity.class.getName());
         startActivity(intent);
         break;
-      case R.id.menu_help:
+      case R.id.menu_help:  //帮助
         intent.setClassName(this, HelpActivity.class.getName());
         startActivity(intent);
         break;
@@ -404,6 +411,7 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
     }
     return true;
   }
+  /**---------------menu end----------------**/
 
   @Override
   public void onActivityResult(int requestCode, int resultCode, Intent intent) {
@@ -433,7 +441,7 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
     }
   }
 
-  //----------------SurfaceHolder.Callback--------------------------
+  /**----------------SurfaceHolder.Callback begin--------------------------**/
   @Override
   public void surfaceCreated(SurfaceHolder holder) {
     if (holder == null) {
@@ -456,7 +464,7 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
   public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
     // do nothing
   }
-  //----------------SurfaceHolder.Callback--------------------------
+  /**----------------SurfaceHolder.Callback end--------------------------**/
 
 
   /**
@@ -466,6 +474,7 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
    * @param scaleFactor amount by which thumbnail was scaled
    * @param barcode   A greyscale bitmap of the camera data which was decoded.
    */
+  /**---------------解码成功后，UI显示等处理------------------**/
   public void handleDecode(Result rawResult, Bitmap barcode, float scaleFactor) {
     inactivityTimer.onActivity();
     lastResult = rawResult;
@@ -473,6 +482,7 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
 
     boolean fromLiveScan = barcode != null;
     if (fromLiveScan) {
+      Log.i(TAG, "++++++++++" + Utils.getLineNumber(new Exception()));
       historyManager.addHistoryItem(rawResult, resultHandler);
       // Then not from history, so beep/vibrate and we have an image to draw on
       beepManager.playBeepSoundAndVibrate();
@@ -492,8 +502,10 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
         }
         break;
       case NONE:
+        Log.i(TAG, "----------------1");
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
         if (fromLiveScan && prefs.getBoolean(PreferencesActivity.KEY_BULK_MODE, false)) {
+          Log.i(TAG, "----------------2");
           Toast.makeText(getApplicationContext(),
                          getResources().getString(R.string.msg_bulk_mode_scanned) + " (" + rawResult.getText() + ')',
                          Toast.LENGTH_SHORT).show();
@@ -501,8 +513,10 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
           // Wait a moment or else it will scan the same barcode continuously about 3 times
           restartPreviewAfterDelay(BULK_MODE_SCAN_DELAY_MS);
         } else {
-          handleDecodeInternally(rawResult, resultHandler, barcode);
+          Log.i(TAG, "----------------3");
+          handleDecodeInternally(rawResult, resultHandler, barcode);  //UI显示识别结果
         }
+        Log.i(TAG, "----------------4");
         break;
     }
   }
@@ -516,26 +530,36 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
    */
   private void drawResultPoints(Bitmap barcode, float scaleFactor, Result rawResult) {
     ResultPoint[] points = rawResult.getResultPoints();
+    Log.i(TAG, "--------------" + Utils.getLineNumber(new Exception()));
     if (points != null && points.length > 0) {
+      Log.i(TAG, "--------------" + Utils.getLineNumber(new Exception()));
       Canvas canvas = new Canvas(barcode);
       Paint paint = new Paint();
       paint.setColor(getResources().getColor(R.color.result_points));
       if (points.length == 2) {
+        Log.i(TAG, "--------------" + Utils.getLineNumber(new Exception()));
         paint.setStrokeWidth(4.0f);
         drawLine(canvas, paint, points[0], points[1], scaleFactor);
       } else if (points.length == 4 &&
                  (rawResult.getBarcodeFormat() == BarcodeFormat.UPC_A ||
                   rawResult.getBarcodeFormat() == BarcodeFormat.EAN_13)) {
+        Log.i(TAG, "--------------" + Utils.getLineNumber(new Exception()));
         // Hacky special case -- draw two lines, for the barcode and metadata
         drawLine(canvas, paint, points[0], points[1], scaleFactor);
         drawLine(canvas, paint, points[2], points[3], scaleFactor);
       } else {
+        Log.i(TAG, "--------------" + Utils.getLineNumber(new Exception()));
         paint.setStrokeWidth(10.0f);
+        int count = 0, count1 = 0;
         for (ResultPoint point : points) {
+          count++;
           if (point != null) {
+            count1++;
+            Log.i(TAG, "==");
             canvas.drawPoint(scaleFactor * point.getX(), scaleFactor * point.getY(), paint);
           }
         }
+        Log.i(TAG, Utils.getLineNumber(new Exception()) + "--------------count:" + count + ",count1:" + count1);
       }
     }
   }
@@ -550,6 +574,7 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
     }
   }
 
+  /**---------------------解码成功后的UI显示-------------------------**/
   // Put up our own UI for how to handle the decoded contents.
   private void handleDecodeInternally(Result rawResult, ResultHandler resultHandler, Bitmap barcode) {
 
@@ -562,80 +587,112 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
       return;
     }
 
-    statusView.setVisibility(View.GONE);
-    viewfinderView.setVisibility(View.GONE);
-    resultView.setVisibility(View.VISIBLE);
+    statusView.setVisibility(View.GONE);  //隐藏底部提示（“请将条码置于取景框内扫描。”）
+    viewfinderView.setVisibility(View.GONE);  //隐藏取景框
+    resultView.setVisibility(View.VISIBLE);  //显示扫描结果
 
     ImageView barcodeImageView = (ImageView) findViewById(R.id.barcode_image_view);
     if (barcode == null) {
       barcodeImageView.setImageBitmap(BitmapFactory.decodeResource(getResources(),
           R.drawable.launcher_icon));
+//      barcodeImageView.setImageResource(R.drawable.launcher_icon);  //可以使用这种方式吗？
     } else {
-      barcodeImageView.setImageBitmap(barcode);
+      barcodeImageView.setImageBitmap(barcode);  //显示识别成功后的缩略图
     }
 
     TextView formatTextView = (TextView) findViewById(R.id.format_text_view);
-    formatTextView.setText(rawResult.getBarcodeFormat().toString());
+    formatTextView.setText(rawResult.getBarcodeFormat().toString());  //格式
 
     TextView typeTextView = (TextView) findViewById(R.id.type_text_view);
-    typeTextView.setText(resultHandler.getType().toString());
+    typeTextView.setText(resultHandler.getType().toString());  //类型
 
     DateFormat formatter = DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT);
     TextView timeTextView = (TextView) findViewById(R.id.time_text_view);
-    timeTextView.setText(formatter.format(rawResult.getTimestamp()));
+    timeTextView.setText(formatter.format(rawResult.getTimestamp()));  //时间
 
 
     TextView metaTextView = (TextView) findViewById(R.id.meta_text_view);
     View metaTextViewLabel = findViewById(R.id.meta_text_view_label);
-    metaTextView.setVisibility(View.GONE);
-    metaTextViewLabel.setVisibility(View.GONE);
+    metaTextView.setVisibility(View.GONE);  //隐藏（若metadata为空）
+    metaTextViewLabel.setVisibility(View.GONE);  //隐藏（若metadata为空）
     Map<ResultMetadataType,Object> metadata = rawResult.getResultMetadata();
     if (metadata != null) {
       StringBuilder metadataText = new StringBuilder(20);
       for (Map.Entry<ResultMetadataType,Object> entry : metadata.entrySet()) {
+        Log.i(TAG, "entry:" + entry.toString());
         if (DISPLAYABLE_METADATA_TYPES.contains(entry.getKey())) {
           metadataText.append(entry.getValue()).append('\n');
+          //以下为调试代码 qiub_200131
+          if (ResultMetadataType.BYTE_SEGMENTS == entry.getKey()) {
+            Log.i(TAG, "key:BYTE_SEGMENTS");
+          } else if (ResultMetadataType.ERROR_CORRECTION_LEVEL == entry.getKey()) {
+            Log.i(TAG, "key:ERROR_CORRECTION_LEVEL");
+          } else if (ResultMetadataType.ISSUE_NUMBER == entry.getKey()) {
+            Log.i(TAG, "key:ISSUE_NUMBER");
+          } else if (ResultMetadataType.ORIENTATION == entry.getKey()) {
+            Log.i(TAG, "key:ORIENTATION");
+          } else if (ResultMetadataType.OTHER == entry.getKey()) {
+            Log.i(TAG, "key:OTHER");
+          } else if (ResultMetadataType.PDF417_EXTRA_METADATA == entry.getKey()) {
+            Log.i(TAG, "key:PDF417_EXTRA_METADATA");
+          } else if (ResultMetadataType.POSSIBLE_COUNTRY == entry.getKey()) {
+            Log.i(TAG, "key:POSSIBLE_COUNTRY");
+          } else if (ResultMetadataType.STRUCTURED_APPEND_PARITY == entry.getKey()) {
+            Log.i(TAG, "key:STRUCTURED_APPEND_PARITY");
+          } else if (ResultMetadataType.STRUCTURED_APPEND_SEQUENCE == entry.getKey()) {
+            Log.i(TAG, "key:STRUCTURED_APPEND_SEQUENCE");
+          } else if (ResultMetadataType.SUGGESTED_PRICE == entry.getKey()) {
+            Log.i(TAG, "key:SUGGESTED_PRICE");
+          } else if (ResultMetadataType.UPC_EAN_EXTENSION == entry.getKey()) {
+            Log.i(TAG, "key:UPC_EAN_EXTENSION");
+          }
         }
       }
       if (metadataText.length() > 0) {
+        Log.i(TAG, "metadataText.length() > 0,length:" + metadataText.length());
         metadataText.setLength(metadataText.length() - 1);
         metaTextView.setText(metadataText);
-        metaTextView.setVisibility(View.VISIBLE);
-        metaTextViewLabel.setVisibility(View.VISIBLE);
+        metaTextView.setVisibility(View.VISIBLE);  //显示
+        metaTextViewLabel.setVisibility(View.VISIBLE);  //显示
       }
+      Log.i(TAG, "metadataText length:" + metadataText.length());
     }
 
     CharSequence displayContents = resultHandler.getDisplayContents();
     TextView contentsTextView = (TextView) findViewById(R.id.contents_text_view);
-    contentsTextView.setText(displayContents);
+    contentsTextView.setText(displayContents);  //显示二维码内容
     int scaledSize = Math.max(22, 32 - displayContents.length() / 4);
-    contentsTextView.setTextSize(TypedValue.COMPLEX_UNIT_SP, scaledSize);
+    Log.i(TAG, "displayContents:" + displayContents);
+    Log.i(TAG, "scaledSize:" + scaledSize);
+    contentsTextView.setTextSize(TypedValue.COMPLEX_UNIT_SP, scaledSize);  //设置字体大小
 
     TextView supplementTextView = (TextView) findViewById(R.id.contents_supplement_text_view);
-    supplementTextView.setText("");
+    supplementTextView.setText("");  //显示空字符串
     supplementTextView.setOnClickListener(null);
     if (PreferenceManager.getDefaultSharedPreferences(this).getBoolean(
         PreferencesActivity.KEY_SUPPLEMENTAL, true)) {
+      //暂不清楚什么意思？ qiub_200131
       SupplementalInfoRetriever.maybeInvokeRetrieval(supplementTextView,
                                                      resultHandler.getResult(),
                                                      historyManager,
                                                      this);
     }
 
+    /**----------UI底部的按钮显示----------------**/
     int buttonCount = resultHandler.getButtonCount();
+    Log.i(TAG, "buttonCount:" + buttonCount);
     ViewGroup buttonView = (ViewGroup) findViewById(R.id.result_button_view);
     buttonView.requestFocus();
     for (int x = 0; x < ResultHandler.MAX_BUTTON_COUNT; x++) {
       TextView button = (TextView) buttonView.getChildAt(x);
       if (x < buttonCount) {
-        button.setVisibility(View.VISIBLE);
-        button.setText(resultHandler.getButtonText(x));
+        button.setVisibility(View.VISIBLE);  //设置为可见
+        button.setText(resultHandler.getButtonText(x));  //显示内容
         button.setOnClickListener(new ResultButtonListener(resultHandler, x));
       } else {
-        button.setVisibility(View.GONE);
+        button.setVisibility(View.GONE);  //设置为隐藏
       }
     }
-
   }
 
   // Briefly show the contents of the barcode, then handle the result outside Barcode Scanner.

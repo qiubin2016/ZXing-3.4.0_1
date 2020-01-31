@@ -75,6 +75,7 @@ public final class CaptureActivityHandler extends Handler {
     restartPreviewAndDecode();
   }
 
+  /**----------------handleMessage begin----------------**/
   @Override
   public void handleMessage(Message message) {
     switch (message.what) {
@@ -142,6 +143,7 @@ public final class CaptureActivityHandler extends Handler {
         break;
     }
   }
+  /**----------------handleMessage end----------------**/
 
   public void quitSynchronously() {
     state = State.DONE;

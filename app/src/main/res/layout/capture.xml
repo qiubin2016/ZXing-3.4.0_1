@@ -34,6 +34,9 @@
                 android:visibility="gone"
                 android:baselineAligned="false">
 
+    <!--android:layout_weight="1" ，父控件的剩余空间按照设置的权重比例再分配，也就是在布局的时候，
+    系统先按照view的layout_width和layout_height来布局，然后再根据layout_weight对view的位置进行调整。
+    此处LinearLayout中的button会放至最底部，剩余的空间全部分配给当前LinearLayout-->
     <LinearLayout
         android:orientation="horizontal"
         android:layout_width="fill_parent"
