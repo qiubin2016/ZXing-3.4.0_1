@@ -16,6 +16,7 @@
 
 package com.google.zxing.client.android;
 
+import com.google.android.material.snackbar.Snackbar;
 import com.google.zxing.BarcodeFormat;
 import com.google.zxing.DecodeHintType;
 import com.google.zxing.Result;
@@ -33,16 +34,19 @@ import com.google.zxing.client.android.result.supplement.SupplementalInfoRetriev
 import com.google.zxing.client.android.share.ShareActivity;
 import com.google.zxing.client.android.utils.Utils;
 
+import android.Manifest;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.ActivityInfo;
+import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Paint;
+import android.hardware.camera2.CaptureRequest;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
@@ -65,8 +69,14 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
+
 import java.io.IOException;
 import java.text.DateFormat;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.EnumSet;
 import java.util.Map;
@@ -81,7 +91,7 @@ import java.util.Map;
  * 注意事项：在Redmi 6 Pro上（MIUI 11.0.4 android 9.0）运行会出现崩溃，报错："getDiskStats failed with result NOT_SUPPORTED and size 0"
  * 解决办法：app内需添加动态申请相机权限或者手动在系统权限管理里对该应用授权相机权限
  */
-public final class CaptureActivity extends Activity implements SurfaceHolder.Callback {
+public final class CaptureActivity extends Activity implements SurfaceHolder.Callback, ActivityCompat.OnRequestPermissionsResultCallback{
 
   private static final String TAG = CaptureActivity.class.getSimpleName();
 
@@ -123,6 +133,8 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
   private BeepManager beepManager;
   private AmbientLightManager ambientLightManager;
 
+  private static final int PERMISSION_REQUEST_MULTI = 0;
+
   ViewfinderView getViewfinderView() {
     return viewfinderView;
   }
@@ -149,12 +161,78 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
     ambientLightManager = new AmbientLightManager(this);
 
     PreferenceManager.setDefaultValues(this, R.xml.preferences, false);
+
+//    requestPermission();  //动态申请权限
+
+  }
+
+  private void requestPermission() {
+    final ArrayList<String> permissionList = new ArrayList<>();
+    String[] permissions = new String[]{Manifest.permission.CAMERA,
+            Manifest.permission.READ_EXTERNAL_STORAGE};
+
+    //逐个判断是否还有未通过的权限
+    for (int i = 0; i < permissions.length; i++) {
+      int checkSelfPermission = -1;
+      try {
+        checkSelfPermission = ContextCompat.checkSelfPermission(this, permissions[i]);
+        if (PackageManager.PERMISSION_GRANTED == checkSelfPermission) {
+          permissionList.add(permissions[i]);
+        }
+      } catch (RuntimeException e) {
+        Toast.makeText(this, "please open those permission", Toast.LENGTH_SHORT)
+                .show();
+        Log.e(TAG, "RuntimeException:" + e.getMessage());
+
+        return ;
+      }
+    }
+    if (permissionList.size() > 0) {
+      Log.i(TAG, "==============================size > 0");
+      // Request the permission. The result will be received in onRequestPermissionResult().
+      ActivityCompat.requestPermissions(this,
+              permissionList.toArray(new String[permissionList.size()]),
+              PERMISSION_REQUEST_MULTI);
+    } else {
+      Log.i(TAG, "==============================size > 1");
+    }
+  }
+
+  @Override
+  public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+    super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+    // BEGIN_INCLUDE(onRequestPermissionsResult)
+    if (requestCode == PERMISSION_REQUEST_MULTI) {
+      // Request for camera permission.
+      if (grantResults.length == 1 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+        // Permission has been granted. Start camera preview Activity.
+        try {
+//          Snackbar.make(mLayout, R.string.camera_permission_granted,
+//                  Snackbar.LENGTH_SHORT)
+//                  .show();
+          Toast.makeText(this, R.string.camera_permission_granted, Toast.LENGTH_SHORT)
+                  .show();
+        } catch (Exception e) {
+          Log.i(TAG, "====================crash 1");
+          e.printStackTrace();
+        }
+//        startCamera();
+      } else {
+        // Permission request was denied.
+//        Snackbar.make(mLayout, R.string.camera_permission_denied,
+//                Snackbar.LENGTH_SHORT)
+//                .show();
+        Toast.makeText(this, R.string.camera_permission_denied, Toast.LENGTH_SHORT)
+                .show();
+      }
+    }
+    // END_INCLUDE(onRequestPermissionsResult)
   }
 
   @Override
   protected void onResume() {
     super.onResume();
-    
+    Log.i(TAG, "onResume======================================");
     // historyManager must be initialized here to update the history preference
     historyManager = new HistoryManager(this);
     historyManager.trimHistory();

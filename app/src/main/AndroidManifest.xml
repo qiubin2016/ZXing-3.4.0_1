@@ -32,7 +32,7 @@
               android:screenOrientation="sensorLandscape"
               android:clearTaskOnLaunch="true"
               android:stateNotNeeded="true"
-              android:theme="@style/CaptureTheme"
+        android:theme="@style/CaptureTheme"
               android:windowSoftInputMode="stateAlwaysHidden">
       <intent-filter>
         <action android:name="android.intent.action.MAIN"/>
