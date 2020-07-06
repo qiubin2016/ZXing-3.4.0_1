@@ -78,6 +78,7 @@ public final class CameraManager {
   public synchronized void openDriver(SurfaceHolder holder) throws IOException {
     OpenCamera theCamera = camera;
     if (theCamera == null) {
+      Log.i(TAG, "requestedCameraId:" + requestedCameraId);
       theCamera = OpenCameraInterface.open(requestedCameraId);
       if (theCamera == null) {
         throw new IOException("Camera.open() failed to return object from driver");
@@ -319,6 +320,9 @@ public final class CameraManager {
    * @return A PlanarYUVLuminanceSource instance.
    */
   public PlanarYUVLuminanceSource buildLuminanceSource(byte[] data, int width, int height) {
+    // 直接返回整幅图像的数据，而不计算聚焦框大小。 qiub_200417
+//    return new PlanarYUVLuminanceSource(data, width, height, 0, 0, width, height, false);
+
     Rect rect = getFramingRectInPreview();
     if (rect == null) {
       return null;
@@ -327,5 +331,4 @@ public final class CameraManager {
     return new PlanarYUVLuminanceSource(data, width, height, rect.left, rect.top,
                                         rect.width(), rect.height(), false);
   }
-
 }

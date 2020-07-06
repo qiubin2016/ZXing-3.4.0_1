@@ -83,6 +83,7 @@ public final class CaptureActivityHandler extends Handler {
         restartPreviewAndDecode();
         break;
       case R.id.decode_succeeded:
+        Log.d(TAG, "decode_succeeded");
         state = State.SUCCESS;
         Bundle bundle = message.getData();
         Bitmap barcode = null;
@@ -106,7 +107,7 @@ public final class CaptureActivityHandler extends Handler {
         break;
       case R.id.return_scan_result:
         activity.setResult(Activity.RESULT_OK, (Intent) message.obj);
-        activity.finish();
+        activity.finish();  //关闭activity
         break;
       case R.id.launch_product_query:
         String url = (String) message.obj;

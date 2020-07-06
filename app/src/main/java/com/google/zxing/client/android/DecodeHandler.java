@@ -42,14 +42,13 @@ final class DecodeHandler extends Handler {
 
   private final CaptureActivity activity;
   private final MultiFormatReader multiFormatReader;
-  private final QRCodeReader qrCodeReader;
+//  private final QRCodeReader qrCodeReader;
   private boolean running = true;
 
   DecodeHandler(CaptureActivity activity, Map<DecodeHintType,Object> hints) {
     multiFormatReader = new MultiFormatReader();
     multiFormatReader.setHints(hints);
-
-    qrCodeReader = new QRCodeReader();
+//    qrCodeReader = new QRCodeReader();
 
     this.activity = activity;
   }
@@ -102,6 +101,7 @@ final class DecodeHandler extends Handler {
         // continue
       } finally {
         multiFormatReader.reset();
+//        qrCodeReader.reset();
       }
     }
 

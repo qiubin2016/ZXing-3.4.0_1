@@ -271,8 +271,16 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
     inactivityTimer.onResume();
 
     Intent intent = getIntent();
+    //视美泰 0:RGB 1:IR
+    intent.putExtra(Intents.Scan.CAMERA_ID, 0);  //0--后置，1--前置
+    if (intent.hasExtra(Intents.Scan.CAMERA_ID)){
+      Log.i(TAG, "onResume:intent has camera id!");
+    } else {
+      Log.i(TAG, "onResume:intent has camera id!");
+    }
+    intent.setAction(Intents.Scan.ACTION);
 
-    copyToClipboard = prefs.getBoolean(PreferencesActivity.KEY_COPY_TO_CLIPBOARD, true)
+      copyToClipboard = prefs.getBoolean(PreferencesActivity.KEY_COPY_TO_CLIPBOARD, true)
         && (intent == null || intent.getBooleanExtra(Intents.Scan.SAVE_HISTORY, true));
 
     source = IntentSource.NONE;
@@ -305,22 +313,26 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
             cameraManager.setManualFramingRect(width, height);
           }
         }
-
+        Log.i(TAG, "onResume:-----------------------camera id 0");
         if (intent.hasExtra(Intents.Scan.CAMERA_ID)) {
+          Log.i(TAG, "onResume:-----------------------camera id 1");
           int cameraId = intent.getIntExtra(Intents.Scan.CAMERA_ID, -1);
           if (cameraId >= 0) {
+            Log.i(TAG, "onResume:cameraId:" + cameraId);
             cameraManager.setManualCameraId(cameraId);
           }
+        } else {
+          Log.i(TAG, "onResume:-----------------------camera id 2");
         }
-        
+
         String customPromptMessage = intent.getStringExtra(Intents.Scan.PROMPT_MESSAGE);
         if (customPromptMessage != null) {
           statusView.setText(customPromptMessage);
         }
 
       } else if (dataString != null &&
-                 dataString.contains("http://www.google") &&
-                 dataString.contains("/m/products/scan")) {
+              dataString.contains("http://www.google") &&
+              dataString.contains("/m/products/scan")) {
 
         // Scan only products and send the result to mobile Product Search.
         source = IntentSource.PRODUCT_SEARCH_LINK;
@@ -345,6 +357,8 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
 
       characterSet = intent.getStringExtra(Intents.Scan.CHARACTER_SET);
       Log.i(TAG, "characterSet:" + characterSet);
+    } else {
+      Log.i(TAG, "onResume:intent is null!");
     }
 
     SurfaceView surfaceView = (SurfaceView) findViewById(R.id.preview_view);
@@ -398,6 +412,7 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
   //当系统即将启动另一个activity之前调用
   @Override
   protected void onPause() {
+    Log.i(TAG, "onPause");
     if (handler != null) {
       handler.quitSynchronously();
       handler = null;
@@ -418,6 +433,7 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
   //当前activity被销毁之前将会调用
   @Override
   protected void onDestroy() {
+    Log.i(TAG, "onDestroy");
     inactivityTimer.shutdown();
     super.onDestroy();
   }
@@ -554,49 +570,55 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
    */
   /**---------------解码成功后，UI显示等处理------------------**/
   public void handleDecode(Result rawResult, Bitmap barcode, float scaleFactor) {
-    inactivityTimer.onActivity();
-    lastResult = rawResult;
-    ResultHandler resultHandler = ResultHandlerFactory.makeResultHandler(this, rawResult);
+    beepManager.playBeepSoundAndVibrate();  //蜂鸣器响一声
 
-    boolean fromLiveScan = barcode != null;
-    if (fromLiveScan) {
-      Log.i(TAG, "++++++++++" + Utils.getLineNumber(new Exception()));
-      historyManager.addHistoryItem(rawResult, resultHandler);
-      // Then not from history, so beep/vibrate and we have an image to draw on
-      beepManager.playBeepSoundAndVibrate();
-      drawResultPoints(barcode, scaleFactor, rawResult);
-    }
-
-    switch (source) {
-      case NATIVE_APP_INTENT:
-      case PRODUCT_SEARCH_LINK:
-        handleDecodeExternally(rawResult, resultHandler, barcode);
-        break;
-      case ZXING_LINK:
-        if (scanFromWebPageManager == null || !scanFromWebPageManager.isScanFromWebPage()) {
-          handleDecodeInternally(rawResult, resultHandler, barcode);
-        } else {
-          handleDecodeExternally(rawResult, resultHandler, barcode);
-        }
-        break;
-      case NONE:
-        Log.i(TAG, "----------------1");
-        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
-        if (fromLiveScan && prefs.getBoolean(PreferencesActivity.KEY_BULK_MODE, false)) {
-          Log.i(TAG, "----------------2");
-          Toast.makeText(getApplicationContext(),
-                         getResources().getString(R.string.msg_bulk_mode_scanned) + " (" + rawResult.getText() + ')',
-                         Toast.LENGTH_SHORT).show();
-          maybeSetClipboard(resultHandler);
-          // Wait a moment or else it will scan the same barcode continuously about 3 times
-          restartPreviewAfterDelay(BULK_MODE_SCAN_DELAY_MS);
-        } else {
-          Log.i(TAG, "----------------3");
-          handleDecodeInternally(rawResult, resultHandler, barcode);  //UI显示识别结果
-        }
-        Log.i(TAG, "----------------4");
-        break;
-    }
+//    inactivityTimer.onActivity();
+//    lastResult = rawResult;
+//    ResultHandler resultHandler = ResultHandlerFactory.makeResultHandler(this, rawResult);
+//
+//    boolean fromLiveScan = barcode != null;
+//    if (fromLiveScan) {
+//      Log.i(TAG, "++++++++++" + Utils.getLineNumber(new Exception()));
+//      historyManager.addHistoryItem(rawResult, resultHandler);
+//      // Then not from history, so beep/vibrate and we have an image to draw on
+//      beepManager.playBeepSoundAndVibrate();
+//      Log.i(TAG, "++++++++++" + Utils.getLineNumber(new Exception()));
+//      drawResultPoints(barcode, scaleFactor, rawResult);
+//    }
+//    source = IntentSource.NONE;
+//    switch (source) {
+//      case NATIVE_APP_INTENT:
+//      case PRODUCT_SEARCH_LINK:
+//        Log.i(TAG, "++++++++++" + Utils.getLineNumber(new Exception()));
+//        handleDecodeExternally(rawResult, resultHandler, barcode);
+//        break;
+//      case ZXING_LINK:
+//        if (scanFromWebPageManager == null || !scanFromWebPageManager.isScanFromWebPage()) {
+//          Log.i(TAG, "----------------ZXING_LINK 1");
+//          handleDecodeInternally(rawResult, resultHandler, barcode);
+//        } else {
+//          Log.i(TAG, "----------------ZXING_LINK 2");
+//          handleDecodeExternally(rawResult, resultHandler, barcode);
+//        }
+//        break;
+//      case NONE:
+//        Log.i(TAG, "----------------1");
+//        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
+//        if (fromLiveScan && prefs.getBoolean(PreferencesActivity.KEY_BULK_MODE, false)) {
+//          Log.i(TAG, "----------------2");
+//          Toast.makeText(getApplicationContext(),
+//                         getResources().getString(R.string.msg_bulk_mode_scanned) + " (" + rawResult.getText() + ')',
+//                         Toast.LENGTH_SHORT).show();
+//          maybeSetClipboard(resultHandler);
+//          // Wait a moment or else it will scan the same barcode continuously about 3 times
+//          restartPreviewAfterDelay(BULK_MODE_SCAN_DELAY_MS);
+//        } else {
+//          Log.i(TAG, "----------------3");
+//          handleDecodeInternally(rawResult, resultHandler, barcode);  //UI显示识别结果
+//        }
+//        Log.i(TAG, "----------------4");
+//        break;
+//    }
   }
 
   /**
@@ -633,7 +655,7 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
           count++;
           if (point != null) {
             count1++;
-            Log.i(TAG, "==");
+            Log.i(TAG, "==" + Utils.getLineNumber(new Exception()));
             canvas.drawPoint(scaleFactor * point.getX(), scaleFactor * point.getY(), paint);
           }
         }
@@ -810,6 +832,7 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
         if (rawBytes != null && rawBytes.length > 0) {
           intent.putExtra(Intents.Scan.RESULT_BYTES, rawBytes);
         }
+        Log.i(TAG, "++" + Utils.getLineNumber(new Exception()));
         Map<ResultMetadataType, ?> metadata = rawResult.getResultMetadata();
         if (metadata != null) {
           if (metadata.containsKey(ResultMetadataType.UPC_EAN_EXTENSION)) {
@@ -834,7 +857,9 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
             }
           }
         }
-        sendReplyMessage(R.id.return_scan_result, intent, resultDurationMS);
+        Log.i(TAG, "++" + Utils.getLineNumber(new Exception()));
+//        sendReplyMessage(R.id.return_scan_result, intent, resultDurationMS);
+        sendReplyMessage(R.id.decode_failed, intent, resultDurationMS);
         break;
 
       case PRODUCT_SEARCH_LINK:
@@ -863,6 +888,7 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
   }
   
   private void sendReplyMessage(int id, Object arg, long delayMS) {
+    Log.i(TAG, "++" + Utils.getLineNumber(new Exception()) + "id:" + id + ",arg:" + arg + ",delayMs:" + delayMS);
     if (handler != null) {
       Message message = Message.obtain(handler, id, arg);
       if (delayMS > 0L) {
