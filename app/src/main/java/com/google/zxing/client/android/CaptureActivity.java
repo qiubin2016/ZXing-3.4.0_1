@@ -171,7 +171,7 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
     String[] permissions = new String[]{Manifest.permission.CAMERA,
             Manifest.permission.READ_EXTERNAL_STORAGE};
 
-    //逐个判断是否还有未通过的权限
+    //逐个判断是否还有未通过的权限 
     for (int i = 0; i < permissions.length; i++) {
       int checkSelfPermission = -1;
       try {
